@@ -31,7 +31,7 @@ import me.tracklist.entities.TracklistJsonProtocol._
 import spray.json._
 
 object ApplicationMain extends App {
-
+  /**
   val converter = new Lame("storage/1/SPH139_1.wav")
   val options320 = Lame.options(
     "storage/1/SPH139_1_320.mp3", 
@@ -65,7 +65,7 @@ object ApplicationMain extends App {
   println("Read file "+name+" with extension "+extension)
 
   println("Sequential conversion time (microseconds)")
-
+  **/
   /** TEST LAME CONVERSION AND FFMPEG CUTTING 
   for (i <- 1 to 1) {
     val now = System.nanoTime
