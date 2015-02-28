@@ -31,6 +31,10 @@ import scala.concurrent._
 import scala.concurrent.duration._
 import ExecutionContext.Implicits.global
 
+// Spray JSON conversion
+import spray.json._
+import DefaultJsonProtocol._
+
 /**
  * Akka actor used to process a release
  * Uses several TrackWorker actors to handle each track
@@ -121,7 +125,8 @@ class TrackWorker extends Actor with ActorLogging {
       var conversionResult2 = 1
 
       var waveformBuilder = new WavWaveform(localLosslessPath);
-      currentTrack.waveform = waveformBuilder.getWaveform(512)
+      currentTrack.waveform = 
+	Some(waveformBuilder.getWaveform(512).toJson.prettyPrint)
 
       remoteMp3CutPath = FileUtils.remoteTrackPath(releaseId, mp3CutFilename)
       remoteMp3Path = FileUtils.remoteTrackPath(releaseId, mp3Filename)
