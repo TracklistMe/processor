@@ -18,6 +18,8 @@ case class Release (
   //var releaseType: String = null
   var createdAt: Option[String],
   var updatedAt: Option[String],
+  var processedAt: Option[String],
+  var processingTime: Option[Long],
 
   val Tracks : Array[Track]) {}
  

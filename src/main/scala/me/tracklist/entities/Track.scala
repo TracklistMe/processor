@@ -8,7 +8,13 @@ case class Track(
   var snippetPath: Option[String], 
   var version: Option[String],
   var cover: Option[String],
-  var waveform: Option[String]) {
+  var waveform: Option[String],
+  var status: Option[String],
+  var errorMessage: Option[String],
+  var conversionTime: Option[Long],
+  var downloadTime: Option[Long],
+  var uploadTime: Option[Long],
+  var processedAt: Option[String]) {
 
 }
 
