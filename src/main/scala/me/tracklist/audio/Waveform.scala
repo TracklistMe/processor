@@ -56,4 +56,13 @@ class WavWaveform(val filename: String) {
 
 object WavWaveform {
   def apply(filename: String) = new WavWaveform(filename)
+  def formatToJson(waveform: Array[Float], precision: Int): String = {
+    var waveformString = "[";
+    val format : String = "%." + precision + "f"
+    for (value <- waveform.slice(0, waveform.length - 1 )) {
+      waveformString = waveformString + String.format(format, value: java.lang.Float) + ","
+    }
+    waveformString = waveformString + String.format(format, waveform(waveform.length-1): java.lang.Float) + "]"
+    return waveformString
+  }
 }
