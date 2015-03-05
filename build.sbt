@@ -11,5 +11,6 @@ libraryDependencies ++= Seq(
   "com.github.scala-incubator.io" %% "scala-io-file" % "0.4.2",
   "com.google.apis" % "google-api-services-storage" % "v1-rev26-1.19.1",
   "com.rabbitmq" % "amqp-client" % "latest.integration",
-  "io.spray" %%  "spray-json" % "1.3.1"
+  "io.spray" %%  "spray-json" % "1.3.1",
+  "com.github.nscala-time" %% "nscala-time" % "1.8.0"
   )
