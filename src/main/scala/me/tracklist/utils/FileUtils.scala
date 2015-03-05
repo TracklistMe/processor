@@ -71,6 +71,7 @@ object FileUtils {
   def deleteRecursively(pathString: String) {
     val path: Path = Path.fromString(pathString)
     path.deleteRecursively(continueOnFailure=true)
+    path.deleteIfExists()
   }
 
   /**
