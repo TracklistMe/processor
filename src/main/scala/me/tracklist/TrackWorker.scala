@@ -35,6 +35,9 @@ import ExecutionContext.Implicits.global
 import spray.json._
 import DefaultJsonProtocol._
 
+// DateTime utils (wrapper of Joda time)
+import com.github.nscala_time.time.Imports.DateTime
+
 /**
  * Akka actor used to process a release
  * Uses several TrackWorker actors to handle each track
@@ -99,8 +102,17 @@ class TrackWorker extends Actor with ActorLogging {
       val filename = FileUtils.nameFromPath(track.path)
       localLosslessPath = FileUtils.localTrackPath(releaseId, filename)
 
+      // Store statistics, better to have them
+      var downloadTime : Long = 0;
+      var conversionTime : Long = 0;
+      var uploadTime: Long = 0;
+      var now : Long = System.nanoTime
+
       // Download lossless track
       Cloudstorage.downloadObject(track.path, localLosslessPath)
+
+      downloadTime = (System.nanoTime - now) / 1000
+
       // Convert and cut the track
       // TODO manually specify begin-end
       val (baseName, extension) = FileUtils.splitFilename(filename)
@@ -118,41 +130,52 @@ class TrackWorker extends Actor with ActorLogging {
         mp3Path, 
         320)
 
+      now = System.nanoTime
+
       val ffmpegConverter = new Ffmpeg(localLosslessPath)
       val conversionFuture1 = Future{ffmpegConverter.convert(ffmpegConvertOptions)}
       val conversionFuture2 = Future{ffmpegConverter.convert(ffmpegCutOptions)}
       var conversionResult1 = 1
       var conversionResult2 = 1
 
-      var waveformBuilder = new WavWaveform(localLosslessPath);
-      currentTrack.waveform = 
-	Some(waveformBuilder.getWaveform(512).toJson.prettyPrint)
-
-      remoteMp3CutPath = FileUtils.remoteTrackPath(releaseId, mp3CutFilename)
-      remoteMp3Path = FileUtils.remoteTrackPath(releaseId, mp3Filename)
-
       try {
+
+        var waveformBuilder = new WavWaveform(localLosslessPath);
+        val waveform = WavWaveform.formatToJson(waveformBuilder.getWaveform(512), 5)
+
+        remoteMp3CutPath = FileUtils.remoteTrackPath(releaseId, mp3CutFilename)
+        remoteMp3Path = FileUtils.remoteTrackPath(releaseId, mp3Filename)
+
         conversionResult1 = Await.result(conversionFuture1, 1 minutes)
         conversionResult2 = Await.result(conversionFuture2, 1 minutes)
 
 
         // If return status is not 0
         if (conversionResult1 != 0 || conversionResult2 != 0) {
-          sender ! ReleaseWorker.TrackFail(currentTrack, "Track conversion failed")
-          // Should do some cleanup
-
+          throw new Exception("Coversion failed")
         } else {
+          conversionTime = (System.nanoTime - now) / 1000
           // Upload everything
+          now = System.nanoTime
           Cloudstorage.uploadObject(
             remoteMp3CutPath, mp3CutPath, "application/octet-stream")
           Cloudstorage.uploadObject(
             remoteMp3Path, mp3Path, "application/octet-stream")
+          uploadTime = (System.nanoTime - now) / 1000
 
         }   
 
         cleanLocal()
+
         currentTrack.mp3Path = Some(remoteMp3Path)
         currentTrack.snippetPath = Some(remoteMp3CutPath)
+        currentTrack.status = Some("SUCCESS")
+        currentTrack.downloadTime = Some(downloadTime)
+        currentTrack.conversionTime = Some(conversionTime)
+        currentTrack.uploadTime = Some(uploadTime)
+        currentTrack.processedAt = Some(DateTime.now.toString)
+        currentTrack.waveform = Some(waveform)
+
         sender ! ReleaseWorker.TrackSuccess(currentTrack)
 
         //println(waveform.toJson.prettyPrint)
@@ -160,28 +183,46 @@ class TrackWorker extends Actor with ActorLogging {
         // sender ! ReleaseWorker.TrackFail(currentTrack)
 
       } catch {
+        case e: me.tracklist.audio.WavFileException => 
+          var message = "Waveform extraction for track " + track.id + " failed"
+          currentTrack.status = Some("FAIL")
+          currentTrack.errorMessage = Some(message)
+          println(message)
+          // remove the files if they were created
+          cleanLocal()
+          sender ! ReleaseWorker.TrackFail(currentTrack, message)
         case e: InterruptedException => 
-          println("Fatal error occurred while converting track")
+          var message = "Conversion of track " + track.id + " got interrupted"
+          currentTrack.status = Some("FAIL")
+          currentTrack.errorMessage = Some(message)
+          println(message)
           // remove the files if they were created
           cleanLocal()
-          sender ! ReleaseWorker.TrackFail(currentTrack, "Track conversion got interrupted")
+          sender ! ReleaseWorker.TrackFail(currentTrack, message)
         case e: TimeoutException => 
-          println("Fatal error occurred while converting track")
+          var message = "Conversion of track " + track.id + " got timed out"
+          currentTrack.status = Some("FAIL")
+          currentTrack.errorMessage = Some(message)
+          println(message)
           // remove the files if they were created
           cleanLocal()
-          sender ! ReleaseWorker.TrackFail(currentTrack, "Track conversion got timed out")
+          sender ! ReleaseWorker.TrackFail(currentTrack, message)
         case e: java.io.IOException =>
-          println("Fatal error occurred while uploading tracks")
+          var message = "Upload of track " + track.id + " failed"
+          currentTrack.status = Some("FAIL")
+          currentTrack.errorMessage = Some(message)
+          println(message)
           // remove the files if they were created
           cleanLocal()
-          cleanRemote()
-          sender ! ReleaseWorker.TrackFail(currentTrack, "Track upload failed")
+          sender ! ReleaseWorker.TrackFail(currentTrack, message)
         case e: Exception =>
-          println("Fatal error processing track")
+          var message = "Processing of track " + track.id + " failed"
+          currentTrack.status = Some("FAIL")
+          currentTrack.errorMessage = Some(message)
+          println(message)
           // remove the files if they were created
           cleanLocal()
-          cleanRemote()
-          sender ! ReleaseWorker.TrackFail(currentTrack, "Track processing failed")
+          sender ! ReleaseWorker.TrackFail(currentTrack, message)
       }
 
 
