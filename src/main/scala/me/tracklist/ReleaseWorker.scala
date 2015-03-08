@@ -196,6 +196,9 @@ class ReleaseWorker extends Actor with ActorLogging {
       processedTracks = processedTracks + 1
       releaseFailed = true
       if (processedTracks == currentRelease.Tracks.length) {
+
+        log.info("Release " + currentRelease.id + " processing failed")
+        
         for ((id, worker) <- trackWorkers) {
           worker ! TrackWorker.TerminateAndRollback
         }
