@@ -14,8 +14,21 @@ class WavWaveform(val filename: String) {
 
   val trackSeconds : Double = numFrames.toDouble/sampleRate.toDouble
 
+  if (trackSeconds == 0) {
+    throw new Exception("Track is less than one second long")
+  }
+
   println("Track is long " + trackSeconds)
   val trackMinutes : Double = trackSeconds / 60.toDouble
+
+  /**
+   * Returns the length of the track in seconds
+   * \return Double representing the length of the track in seconds
+   **/
+  def getLengthInSeconds() : Double = {
+    return trackSeconds
+  }
+
 
   /**
    * Returns and array of doubles representing the waveform of the track
@@ -26,7 +39,9 @@ class WavWaveform(val filename: String) {
 
     var waveform = Array[Float]()
 
-    val totalPoints = Math.ceil(pointsPerMinute*trackMinutes).toInt
+    val pointsPerSecond = pointsPerMinute.toFloat/60.toFloat
+    // Points of the waveform we will collect
+    val totalPoints = Math.ceil(pointsPerSecond*trackSeconds).toInt
     println("Total Points "+totalPoints)
     val sampleSize  = Math.floor(numFrames/totalPoints).toInt
     println("Sample Size "+sampleSize)
@@ -36,11 +51,12 @@ class WavWaveform(val filename: String) {
 
     do {
       // Read frames into buffer
-      framesRead = wavFile.readFrames(buffer, sampleSize);
+      framesRead = wavFile.readNormalizedFrames(buffer, sampleSize);
       var frameMax: Float = Float.MinValue
       var frameIndex = 0
       while (frameIndex < sampleSize * numChannels) {
         // we select the maximum in the Frame
+        //println(buffer(frameIndex))
         if (buffer(frameIndex) > frameMax) 
           frameMax = buffer(frameIndex).toFloat
 
