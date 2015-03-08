@@ -17,7 +17,7 @@ import me.tracklist.rabbitmq._
 // Audio API
 import me.tracklist.audio.Lame
 import me.tracklist.audio.Ffmpeg
-import me.tracklist.audio.WavWaveform
+import me.tracklist.audio._
 
 
 // File utils
@@ -31,7 +31,28 @@ import me.tracklist.entities.TracklistJsonProtocol._
 import spray.json._
 
 object ApplicationMain extends App {
-  /**
+
+  //var waveform = new WavWaveform("storage/SPH139_1.wav")
+  //println("VALID BITS ARE " + waveform.validBit)
+  //waveform.getWaveform(512).foreach(x => print(x + ", "))
+  //val file = new AiffFile("wood12.aiff")
+  //file.getWaveform(1024).foreach(x => println(x + ", "))
+  //val buffer = new Array[Double](100)
+/*
+  var count = file.readFrames(buffer, 100)
+  println("=== SIGNED PCM FIRST "+count+" FRAMES ===")
+  buffer.foreach(x => print(x+", "))
+
+  val file2 = new AiffFile("wood12.aiff")
+
+  count = file2.readNormalizedFrames(buffer, 100)
+  println("=== UNSIGNED PCM FIRST "+count+" FRAMES ===")
+  buffer.foreach(x => print(x+", "))
+*/
+  //Cloudstorage.uploadObjectAsByteArray("file.txt",
+  //          "{\"Hello\": \"World2\"}", "application/json")
+
+/*
   val converter = new Lame("storage/1/SPH139_1.wav")
   val options320 = Lame.options(
     "storage/1/SPH139_1_320.mp3", 
@@ -59,13 +80,14 @@ object ApplicationMain extends App {
   var waveform = waveformBuilder.getWaveform(1024)
   //println(waveform.toJson.prettyPrint)
 
+
   //Cloudstorage.deleteObject("file.txt")
 
   val (name, extension) = FileUtils.splitFilename("SPH139_1.wav")
   println("Read file "+name+" with extension "+extension)
 
   println("Sequential conversion time (microseconds)")
-  **/
+*/
   /** TEST LAME CONVERSION AND FFMPEG CUTTING 
   for (i <- 1 to 1) {
     val now = System.nanoTime

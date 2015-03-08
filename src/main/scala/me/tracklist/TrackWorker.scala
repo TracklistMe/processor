@@ -60,15 +60,16 @@ class TrackWorker extends Actor with ActorLogging {
    **/
   var remoteMp3CutPath : String = null
   var remoteMp3Path : String = null
+  var remoteWaveformPath : String = null
 
 
   /**
    * Delete local files
    **/
   private def cleanLocal() {
-    FileUtils.deleteIfExists(localLosslessPath)
-    FileUtils.deleteIfExists(mp3CutPath)
-    FileUtils.deleteIfExists(mp3Path)
+    if(localLosslessPath != null) FileUtils.deleteIfExists(localLosslessPath)
+    if(mp3CutPath != null) FileUtils.deleteIfExists(mp3CutPath)
+    if(mp3Path != null) FileUtils.deleteIfExists(mp3Path)
   }
 
   /**
@@ -76,12 +77,17 @@ class TrackWorker extends Actor with ActorLogging {
    **/
   private def cleanRemote() {
     try {
-      Cloudstorage.deleteObject(remoteMp3CutPath)
+      if(remoteMp3CutPath != null) Cloudstorage.deleteObject(remoteMp3CutPath)
     } catch {
       case e: Exception => {}
     }
     try {
-      Cloudstorage.deleteObject(remoteMp3Path)
+      if(remoteMp3Path != null) Cloudstorage.deleteObject(remoteMp3Path)
+    } catch {
+      case e: Exception => {}
+    }
+    try {
+      if(remoteWaveformPath != null) Cloudstorage.deleteObject(remoteWaveformPath)
     } catch {
       case e: Exception => {}
     }
@@ -108,43 +114,46 @@ class TrackWorker extends Actor with ActorLogging {
       var uploadTime: Long = 0;
       var now : Long = System.nanoTime
 
-      // Download lossless track
-      Cloudstorage.downloadObject(track.path, localLosslessPath)
-
-      downloadTime = (System.nanoTime - now) / 1000
-
-      // Convert and cut the track
-      // TODO manually specify begin-end
-      val (baseName, extension) = FileUtils.splitFilename(filename)
-
-      val mp3CutFilename = baseName + "_192_snippet.mp3"
-      val mp3Filename = baseName + "_320.mp3"
-
-      mp3CutPath = FileUtils.localTrackPath(releaseId, mp3CutFilename)
-      mp3Path = FileUtils.localTrackPath(releaseId, mp3Filename)
-      
-      val ffmpegCutOptions = Ffmpeg.cutOptions(
-        mp3CutPath, 
-        192, 0, 30)
-      val ffmpegConvertOptions = Ffmpeg.convertOptions(
-        mp3Path, 
-        320)
-
-      now = System.nanoTime
-
-      val ffmpegConverter = new Ffmpeg(localLosslessPath)
-      val conversionFuture1 = Future{ffmpegConverter.convert(ffmpegConvertOptions)}
-      val conversionFuture2 = Future{ffmpegConverter.convert(ffmpegCutOptions)}
-      var conversionResult1 = 1
-      var conversionResult2 = 1
-
       try {
+
+        // Download lossless track
+        Cloudstorage.downloadObject(track.path, localLosslessPath)
+
+        downloadTime = (System.nanoTime - now) / 1000
+
+        // Convert and cut the track
+        // TODO manually specify begin-end
+        val (baseName, extension) = FileUtils.splitFilename(filename)
+
+        val mp3CutFilename = baseName + "_192_snippet.mp3"
+        val mp3Filename = baseName + "_320.mp3"
+        val waveformFilename = baseName + ".waveform"
+
+        mp3CutPath = FileUtils.localTrackPath(releaseId, mp3CutFilename)
+        mp3Path = FileUtils.localTrackPath(releaseId, mp3Filename)
+        
+        val ffmpegCutOptions = Ffmpeg.cutOptions(
+          mp3CutPath, 
+          192, 0, 30)
+        val ffmpegConvertOptions = Ffmpeg.convertOptions(
+          mp3Path, 
+          320)
+
+        now = System.nanoTime
+
+        val ffmpegConverter = new Ffmpeg(localLosslessPath)
+        val conversionFuture1 = Future{ffmpegConverter.convert(ffmpegConvertOptions)}
+        val conversionFuture2 = Future{ffmpegConverter.convert(ffmpegCutOptions)}
+        var conversionResult1 = 1
+        var conversionResult2 = 1
 
         var waveformBuilder = new WavWaveform(localLosslessPath);
         val waveform = WavWaveform.formatToJson(waveformBuilder.getWaveform(512), 5)
+        val lengthInSeconds = waveformBuilder.getLengthInSeconds()
 
         remoteMp3CutPath = FileUtils.remoteTrackPath(releaseId, mp3CutFilename)
         remoteMp3Path = FileUtils.remoteTrackPath(releaseId, mp3Filename)
+        remoteWaveformPath = FileUtils.remoteTrackPath(releaseId, waveformFilename)
 
         conversionResult1 = Await.result(conversionFuture1, 1 minutes)
         conversionResult2 = Await.result(conversionFuture2, 1 minutes)
@@ -157,8 +166,13 @@ class TrackWorker extends Actor with ActorLogging {
           conversionTime = (System.nanoTime - now) / 1000
           // Upload everything
           now = System.nanoTime
+          // Upload waveform
+          Cloudstorage.uploadObjectAsByteArray(remoteWaveformPath,
+            waveform, "application/json")
+          // Upload 192 Kbps mp3 snippet
           Cloudstorage.uploadObject(
             remoteMp3CutPath, mp3CutPath, "application/octet-stream")
+          // Upload 320 Kbps mp3
           Cloudstorage.uploadObject(
             remoteMp3Path, mp3Path, "application/octet-stream")
           uploadTime = (System.nanoTime - now) / 1000
@@ -174,7 +188,8 @@ class TrackWorker extends Actor with ActorLogging {
         currentTrack.conversionTime = Some(conversionTime)
         currentTrack.uploadTime = Some(uploadTime)
         currentTrack.processedAt = Some(DateTime.now.toString)
-        currentTrack.waveform = Some(waveform)
+        currentTrack.lengthInSeconds = Some(lengthInSeconds)
+        currentTrack.waveform = Some(remoteWaveformPath)
 
         sender ! ReleaseWorker.TrackSuccess(currentTrack)
 
@@ -187,7 +202,7 @@ class TrackWorker extends Actor with ActorLogging {
           var message = "Waveform extraction for track " + track.id + " failed"
           currentTrack.status = Some("FAIL")
           currentTrack.errorMessage = Some(message)
-          println(message)
+          log.info(message)
           // remove the files if they were created
           cleanLocal()
           sender ! ReleaseWorker.TrackFail(currentTrack, message)
@@ -195,7 +210,7 @@ class TrackWorker extends Actor with ActorLogging {
           var message = "Conversion of track " + track.id + " got interrupted"
           currentTrack.status = Some("FAIL")
           currentTrack.errorMessage = Some(message)
-          println(message)
+          log.info(message)
           // remove the files if they were created
           cleanLocal()
           sender ! ReleaseWorker.TrackFail(currentTrack, message)
@@ -203,25 +218,33 @@ class TrackWorker extends Actor with ActorLogging {
           var message = "Conversion of track " + track.id + " got timed out"
           currentTrack.status = Some("FAIL")
           currentTrack.errorMessage = Some(message)
-          println(message)
+          log.info(message)
           // remove the files if they were created
           cleanLocal()
           sender ! ReleaseWorker.TrackFail(currentTrack, message)
         case e: java.io.IOException =>
-          var message = "Upload of track " + track.id + " failed"
+          var message = ""
+          if (downloadTime == 0) {
+            message = "Download of track " + track.id + " failed"
+          }
+          else {
+            message = "Upload of track " + track.id + " failed"
+          }
           currentTrack.status = Some("FAIL")
           currentTrack.errorMessage = Some(message)
-          println(message)
+          log.info(message)
           // remove the files if they were created
           cleanLocal()
+          cleanRemote()
           sender ! ReleaseWorker.TrackFail(currentTrack, message)
         case e: Exception =>
           var message = "Processing of track " + track.id + " failed"
           currentTrack.status = Some("FAIL")
           currentTrack.errorMessage = Some(message)
-          println(message)
+          log.info(message)
           // remove the files if they were created
           cleanLocal()
+          cleanRemote()
           sender ! ReleaseWorker.TrackFail(currentTrack, message)
       }
 
