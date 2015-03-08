@@ -15,6 +15,7 @@ import com.google.api.services.storage.Storage
 import com.google.api.services.storage.StorageScopes
 import com.google.api.client.http.AbstractInputStreamContent
 import com.google.api.client.http.FileContent
+import com.google.api.client.http.ByteArrayContent
 
 // Json stuff
 import com.google.api.client.json.GenericJson
@@ -55,20 +56,20 @@ object Cloudstorage {
   }
 
   def downloadObject(key : String, filename : String) = {
-    try {
+//    try {
       val fileOutputStream = new FileOutputStream(filename)
       // Cloudstorage request
       val objectRequest = storage.objects.get(ApplicationConfig.GOOGLE_BUCKET_NAME, key)
       // Execute request
       objectRequest.executeMediaAndDownloadTo(fileOutputStream)
-    } catch {
-      case e: java.io.IOException => println("Whatever IOExc")
-      case e: Exception => println("Whaterver Exc")
-    }
+//    } catch {
+//      case e: java.io.IOException => println("Whatever IOExc")
+//      case e: Exception => println("Whaterver Exc")
+//    }
   }
 
   def uploadObject(key : String, filename : String, contentType : String) = {
-    try {
+//    try {
       // We fetch the contents from a file
       val objectContent = new FileContent(contentType, new File(filename))
       // Metadata, set to null
@@ -81,20 +82,40 @@ object Cloudstorage {
       objectRequest.setName(key);
       // Execute request
       objectRequest.execute()
-    } catch {
-      case e: java.io.IOException => println(e.toString())
-      case e: Exception => println("Whaterver Exc")
-    }
+//    } catch {
+//      case e: java.io.IOException => println(e.toString())
+//      case e: Exception => println("Whaterver Exc")
+//    }
+  }
+
+  def uploadObjectAsByteArray(key : String, content : String, contentType : String) = {
+//    try {
+      // We fetch the contents from a file
+      val objectContent = ByteArrayContent.fromString(contentType, content)
+      // Metadata, set to null
+      val storageObject = null
+      // Cloudstorage request
+      val objectRequest = storage.objects.
+        insert(ApplicationConfig.GOOGLE_BUCKET_NAME, storageObject, objectContent)
+      // If we do not provide metadata we have to set name property
+      // TODO provide metadata
+      objectRequest.setName(key);
+      // Execute request
+      objectRequest.execute()
+//    } catch {
+//      case e: java.io.IOException => println(e.toString())
+//      case e: Exception => println("Whaterver Exc")
+//    }
   }
 
   def deleteObject(key: String) = {
-    try {
+//    try {
         val objectRequest = storage.objects.delete(ApplicationConfig.GOOGLE_BUCKET_NAME, key)
         objectRequest.execute()
-      } catch {
-        case e: java.io.IOException => println("IOException")
-        case e: Exception => println("Exception")
-      }
+//      } catch {
+//        case e: java.io.IOException => println("IOException")
+//        case e: Exception => println("Exception")
+//      }
   }
 
 }
