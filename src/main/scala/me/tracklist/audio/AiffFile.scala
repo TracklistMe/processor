@@ -46,7 +46,7 @@ class AiffFile(val filename: String) {
 
   encoding match {
     case AudioFormat.Encoding.ALAW => println("Encoding is ALAW")
-    case AudioFormat.Encoding.PCM_FLOAT => println("Encoding is floating point PCM")
+    //case AudioFormat.Encoding.PCM_FLOAT => println("Encoding is floating point PCM")
     case AudioFormat.Encoding.PCM_SIGNED => println("Encoding is signed PCM")
     case AudioFormat.Encoding.PCM_UNSIGNED => println("Encoding is unsigned PCM")
     case AudioFormat.Encoding.ULAW => println("Encoding is ULAW")
