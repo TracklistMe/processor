@@ -5,7 +5,7 @@ import TracklistJsonProtocol._
 
 case class Release (
   var id : Int,
-  var title : String,
+  var title : Option[String],
   var releaseDate : Option[String],
   var isActive : Option[Boolean],
   var cover: Option[String],
