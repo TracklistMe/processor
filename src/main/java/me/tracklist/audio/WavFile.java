@@ -33,7 +33,9 @@ public class WavFile
   private boolean wordAlignAdjust;    // Specify if an extra byte at the end of the data chunk is required for word alignment
 
   private double signedToUnsigned = 0.0F;
+  private double unsignedToSigned = 0.0F;
   private double maxUnsignedPCMValue = 0.0F;
+  private double maxSignedPCMValue = 0.0F;
 
   // Wav Header
   private int numChannels;        // 2 bytes unsigned, 0x0001 (1) to 0xFFFF (65,535)
@@ -156,9 +158,11 @@ public class WavFile
       wavFile.floatOffset = 0;
       wavFile.floatScale = Long.MAX_VALUE >> (64 - wavFile.validBits);
       wavFile.signedToUnsigned = (0x1 << (wavFile.validBits-1));
+      wavFile.unsignedToSigned = 0.0F;
       System.out.println("Setting signedToUnsigned " + wavFile.signedToUnsigned);
       wavFile.maxUnsignedPCMValue = (0x1 << wavFile.validBits) - 1;
-      System.out.println("Setting maxUnsignedPCMValue " + wavFile.maxUnsignedPCMValue);
+      wavFile.maxSignedPCMValue = (0x1 << (wavFile.validBits-1));
+      System.out.println("Setting maxSignedPCMValue " + wavFile.maxSignedPCMValue);
     }
     else
     {
@@ -167,9 +171,11 @@ public class WavFile
       wavFile.floatOffset = 1;
       wavFile.floatScale = 0.5 * ((1 << wavFile.validBits) - 1);
       wavFile.signedToUnsigned = 0.0F;
+      wavFile.unsignedToSigned = (0x1 << (wavFile.validBits-1));
       System.out.println("Setting signedToUnsigned " + wavFile.signedToUnsigned);
       wavFile.maxUnsignedPCMValue = (0x1 << wavFile.validBits) - 1;
-      System.out.println("Setting maxUnsignedPCMValue " + wavFile.maxUnsignedPCMValue);
+      wavFile.maxSignedPCMValue = (0x1 << (wavFile.validBits-1));
+      System.out.println("Setting SignedPCMValue " + wavFile.maxSignedPCMValue);
     }
 
     // Finally, set the IO State
@@ -299,19 +305,23 @@ public class WavFile
       wavFile.floatOffset = 0;
       wavFile.floatScale = 1 << (wavFile.validBits - 1);
       wavFile.signedToUnsigned = (0x1 << (wavFile.validBits-1));
+      wavFile.unsignedToSigned = 0x0F;
       System.out.println("Setting signedToUnsigned " + wavFile.signedToUnsigned);
       wavFile.maxUnsignedPCMValue = (0x1 << wavFile.validBits) - 1;
-      System.out.println("Setting maxUnsignedPCMValue " + wavFile.maxUnsignedPCMValue);
+      wavFile.maxSignedPCMValue = (0x1 << (wavFile.validBits-1));
+      System.out.println("Setting maxSignedPCMValue " + wavFile.maxSignedPCMValue);
     }
     else
     {
       // Else if 8 or less validBits, data is unsigned
       // Conversion required dividing by max positive value
       wavFile.floatOffset = -1;
+      wavFile.unsignedToSigned = (0x1 << (wavFile.validBits-1));
       wavFile.floatScale = 0.5 * ((1 << wavFile.validBits) - 1);
       System.out.println("Setting signedToUnsigned " + wavFile.signedToUnsigned);
       wavFile.maxUnsignedPCMValue = (0x1 << wavFile.validBits) - 1;
-      System.out.println("Setting maxUnsignedPCMValue " + wavFile.maxUnsignedPCMValue);
+      wavFile.maxSignedPCMValue = (0x1 << (wavFile.validBits-1));
+      System.out.println("Setting maxSignedPCMValue " + wavFile.maxSignedPCMValue);
     }
 
     wavFile.bufferPointer = 0;
@@ -624,7 +634,7 @@ public class WavFile
       for (int c=0 ; c<numChannels ; c++)
       {
         //System.out.println("(" + signedToUnsigned + " + " + ((double) readSample()) + ")/"+((double) maxUnsignedPCMValue));
-        sampleBuffer[offset] = (signedToUnsigned + (double) readSample()) / (double) maxUnsignedPCMValue;
+        sampleBuffer[offset] = Math.abs((double) Math.abs(readSample()) - unsignedToSigned) / (double) maxSignedPCMValue;
         offset ++;
       }
 
