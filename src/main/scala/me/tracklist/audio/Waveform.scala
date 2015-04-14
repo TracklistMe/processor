@@ -3,30 +3,52 @@ package me.tracklist.audio
 // Scala mutable collections
 import scala.collection.mutable
 
+// Java Audio
+import javax.sound.sampled.AudioSystem
+import javax.sound.sampled.AudioInputStream
+import javax.sound.sampled.AudioFormat
+import javax.sound.sampled.AudioSystem
+
+// Streams
+import java.io.InputStream
+import java.io.FileInputStream
+
 class WavWaveform(val filename: String) {
 
   // May throw IOException or WavFileExecption  
-  val wavFile = WavFile.openWavFile(new java.io.File(filename))
+  val file = new java.io.File(filename)
+  val wavFile = WavFile.openWavFile(file)
+
   val validBit = wavFile.getValidBits()
   val numChannels = wavFile.getNumChannels()
   val numFrames = wavFile.getNumFrames()
   val sampleRate = wavFile.getSampleRate()
 
-  val trackSeconds : Double = numFrames.toDouble/sampleRate.toDouble
+  val lengthInSeconds : Long = numFrames/sampleRate 
+  println("Track is long " + lengthInSeconds + " seconds")
 
-  if (trackSeconds == 0) {
+  if (lengthInSeconds == 0) {
     throw new Exception("Track is less than one second long")
   }
 
-  println("Track is long " + trackSeconds)
-  val trackMinutes : Double = trackSeconds / 60.toDouble
+  var trackMinutes : Long = lengthInSeconds / 60
+  var trackSeconds : Long = lengthInSeconds % 60
+  var trackHours : Long = trackMinutes / 60
+  trackMinutes = trackMinutes % 60
+
+
+  println(
+    "Track length: %02d:%02d:%02d".format(
+      trackHours, 
+      trackMinutes, 
+      trackSeconds))
 
   /**
    * Returns the length of the track in seconds
    * \return Double representing the length of the track in seconds
    **/
-  def getLengthInSeconds() : Double = {
-    return trackSeconds
+  def getLengthInSeconds() : Long = {
+    return lengthInSeconds
   }
 
 

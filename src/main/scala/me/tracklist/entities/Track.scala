@@ -8,7 +8,7 @@ case class Track(
   var snippetPath: Option[String], 
   var version: Option[String],
   var cover: Option[String],
-  var lengthInSeconds: Option[Double],
+  var lengthInSeconds: Option[Long],
   var waveform: Option[String],
   var status: Option[String],
   var errorMessage: Option[String],
