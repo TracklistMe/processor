@@ -199,48 +199,47 @@ class TrackWorker extends Actor with ActorLogging {
 
       } catch {
         case e: me.tracklist.audio.WavFileException => 
-          var message = "Waveform extraction for track " + track.id + " failed"
+          var exceptionMessage = e.getMessage()
+          var message = "Track " + track.id + " error: " + exceptionMessage
           currentTrack.status = Some("FAIL")
-          currentTrack.errorMessage = Some(message)
+          currentTrack.errorMessage = Some(exceptionMessage)
           log.info(message)
           // remove the files if they were created
           cleanLocal()
           sender ! ReleaseWorker.TrackFail(currentTrack, message)
         case e: InterruptedException => 
-          var message = "Conversion of track " + track.id + " got interrupted"
+          var exceptionMessage = e.getMessage()
+          var message = "Track " + track.id + " error: " + exceptionMessage
           currentTrack.status = Some("FAIL")
-          currentTrack.errorMessage = Some(message)
+          currentTrack.errorMessage = Some(exceptionMessage)
           log.info(message)
           // remove the files if they were created
           cleanLocal()
           sender ! ReleaseWorker.TrackFail(currentTrack, message)
         case e: TimeoutException => 
-          var message = "Conversion of track " + track.id + " got timed out"
+          var exceptionMessage = e.getMessage()
+          var message = "Track " + track.id + " error: " + exceptionMessage
           currentTrack.status = Some("FAIL")
-          currentTrack.errorMessage = Some(message)
+          currentTrack.errorMessage = Some(exceptionMessage)
           log.info(message)
           // remove the files if they were created
           cleanLocal()
           sender ! ReleaseWorker.TrackFail(currentTrack, message)
         case e: java.io.IOException =>
-          var message = ""
-          if (downloadTime == 0) {
-            message = "Download of track " + track.id + " failed"
-          }
-          else {
-            message = "Upload of track " + track.id + " failed"
-          }
+          var exceptionMessage = e.getMessage()
+          var message = "Track " + track.id + " error: " + exceptionMessage
           currentTrack.status = Some("FAIL")
-          currentTrack.errorMessage = Some(message)
+          currentTrack.errorMessage = Some(exceptionMessage)
           log.info(message)
           // remove the files if they were created
           cleanLocal()
           cleanRemote()
           sender ! ReleaseWorker.TrackFail(currentTrack, message)
         case e: Exception =>
-          var message = "Processing of track " + track.id + " failed"
+          var exceptionMessage = e.getMessage()
+          var message = "Track " + track.id + " error: " + exceptionMessage
           currentTrack.status = Some("FAIL")
-          currentTrack.errorMessage = Some(message)
+          currentTrack.errorMessage = Some(exceptionMessage)
           log.info(message)
           // remove the files if they were created
           cleanLocal()
