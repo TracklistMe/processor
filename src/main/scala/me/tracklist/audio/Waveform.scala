@@ -63,7 +63,7 @@ class WavWaveform(val filename: String) {
 
     val pointsPerSecond = pointsPerMinute.toFloat/60.toFloat
     // Points of the waveform we will collect
-    val totalPoints = Math.ceil(pointsPerSecond*trackSeconds).toInt
+    val totalPoints = Math.ceil(pointsPerSecond*trackLengthInSeconds).toInt
     println("Total Points "+totalPoints)
     val sampleSize  = Math.floor(numFrames/totalPoints).toInt
     println("Sample Size "+sampleSize)

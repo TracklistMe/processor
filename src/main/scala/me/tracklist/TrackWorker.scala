@@ -148,7 +148,7 @@ class TrackWorker extends Actor with ActorLogging {
         var conversionResult2 = 1
 
         var waveformBuilder = new WavWaveform(localLosslessPath);
-        val waveform = WavWaveform.formatToJson(waveformBuilder.getWaveform(512), 5)
+        val waveform = WavWaveform.formatToJson(waveformBuilder.getWaveform(512), 2)
         val lengthInSeconds = waveformBuilder.getLengthInSeconds()
 
         remoteMp3CutPath = FileUtils.remoteTrackPath(releaseId, mp3CutFilename)
