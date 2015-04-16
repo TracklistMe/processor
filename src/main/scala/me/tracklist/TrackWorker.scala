@@ -74,6 +74,8 @@ class TrackWorker extends Actor with ActorLogging {
 
   /**
    * Get snippet begin and end in seconds
+   * @param lengthInSeconds length of the track in seconds
+   * @returns a pair of the form (cutBegin, cutLength)
    **/
   private def getSnippetRange(lengthInSeconds : Long) : (Long, Long) = {
     val maxSnippetLength : Long = 150L;
@@ -82,8 +84,7 @@ class TrackWorker extends Actor with ActorLogging {
     } else {
       val snippetCenter : Long = Math.ceil(lengthInSeconds / 2).toLong
       val snippetBegin : Long = snippetCenter - (maxSnippetLength/2)
-      val snippetEnd : Long = snippetBegin + maxSnippetLength
-      return (snippetBegin, snippetEnd)
+      return (snippetBegin, maxSnippetLength)
     }
   }
 
