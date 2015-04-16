@@ -73,6 +73,21 @@ class TrackWorker extends Actor with ActorLogging {
   }
 
   /**
+   * Get snippet begin and end in seconds
+   **/
+  private def getSnippetRange(lengthInSeconds : Long) : (Long, Long) = {
+    val maxSnippetLength : Long = 150L;
+    if (maxSnippetLength > lengthInSeconds) {
+      return (0, lengthInSeconds)
+    } else {
+      val snippetCenter : Long = Math.ceil(lengthInSeconds / 2).toLong
+      val snippetBegin : Long = snippetCenter - (maxSnippetLength/2)
+      val snippetEnd : Long = snippetBegin + maxSnippetLength
+      return (snippetBegin, snippetEnd)
+    }
+  }
+
+  /**
    * Delete remote files
    **/
   private def cleanRemote() {
@@ -131,25 +146,28 @@ class TrackWorker extends Actor with ActorLogging {
 
         mp3CutPath = FileUtils.localTrackPath(releaseId, mp3CutFilename)
         mp3Path = FileUtils.localTrackPath(releaseId, mp3Filename)
-        
+
+        var waveformBuilder = new WavWaveform(localLosslessPath);
+        val lengthInSeconds = waveformBuilder.getLengthInSeconds()
+        val snippetRange = getSnippetRange(lengthInSeconds)
+
+        val ffmpegConverter = new Ffmpeg(localLosslessPath)        
         val ffmpegCutOptions = Ffmpeg.cutOptions(
           mp3CutPath, 
-          192, 0, 30)
+          192, snippetRange._1.toInt, snippetRange._2.toInt)
         val ffmpegConvertOptions = Ffmpeg.convertOptions(
           mp3Path, 
           320)
 
         now = System.nanoTime
 
-        val ffmpegConverter = new Ffmpeg(localLosslessPath)
         val conversionFuture1 = Future{ffmpegConverter.convert(ffmpegConvertOptions)}
         val conversionFuture2 = Future{ffmpegConverter.convert(ffmpegCutOptions)}
         var conversionResult1 = 1
         var conversionResult2 = 1
 
-        var waveformBuilder = new WavWaveform(localLosslessPath);
+        
         val waveform = WavWaveform.formatToJson(waveformBuilder.getWaveform(512), 2)
-        val lengthInSeconds = waveformBuilder.getLengthInSeconds()
 
         remoteMp3CutPath = FileUtils.remoteTrackPath(releaseId, mp3CutFilename)
         remoteMp3Path = FileUtils.remoteTrackPath(releaseId, mp3Filename)
