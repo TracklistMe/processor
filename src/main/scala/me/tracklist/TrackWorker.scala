@@ -53,12 +53,14 @@ class TrackWorker extends Actor with ActorLogging {
    **/
   var localLosslessPath : String = null
   var mp3CutPath : String = null
+  var oggCutPath : String = null
   var mp3Path : String = null
 
   /**
    * Remote uploaded files
    **/
   var remoteMp3CutPath : String = null
+  var remoteOggCutPath : String = null
   var remoteMp3Path : String = null
   var remoteWaveformPath : String = null
 
@@ -69,6 +71,7 @@ class TrackWorker extends Actor with ActorLogging {
   private def cleanLocal() {
     if(localLosslessPath != null) FileUtils.deleteIfExists(localLosslessPath)
     if(mp3CutPath != null) FileUtils.deleteIfExists(mp3CutPath)
+    if(oggCutPath != null) FileUtils.deleteIfExists(oggCutPath)
     if(mp3Path != null) FileUtils.deleteIfExists(mp3Path)
   }
 
@@ -94,6 +97,11 @@ class TrackWorker extends Actor with ActorLogging {
   private def cleanRemote() {
     try {
       if(remoteMp3CutPath != null) Cloudstorage.deleteObject(remoteMp3CutPath)
+    } catch {
+      case e: Exception => {}
+    }
+    try {
+      if(remoteOggCutPath != null) Cloudstorage.deleteObject(remoteOggCutPath)
     } catch {
       case e: Exception => {}
     }
@@ -142,10 +150,12 @@ class TrackWorker extends Actor with ActorLogging {
         val (baseName, extension) = FileUtils.splitFilename(filename)
 
         val mp3CutFilename = baseName + "_192_snippet.mp3"
+        val oggCutFilename = baseName + "_192_snippet.ogg"
         val mp3Filename = baseName + "_320.mp3"
         val waveformFilename = baseName + ".waveform"
 
         mp3CutPath = FileUtils.localTrackPath(releaseId, mp3CutFilename)
+        oggCutPath = FileUtils.localTrackPath(releaseId, oggCutFilename)
         mp3Path = FileUtils.localTrackPath(releaseId, mp3Filename)
 
         var waveformBuilder = new WavWaveform(localLosslessPath);
@@ -156,6 +166,9 @@ class TrackWorker extends Actor with ActorLogging {
         val ffmpegCutOptions = Ffmpeg.cutOptions(
           mp3CutPath, 
           192, snippetRange._1.toInt, snippetRange._2.toInt)
+        val ffmpegOggCutOptions = Ffmpeg.cutOptions(
+          oggCutPath, 
+          192, snippetRange._1.toInt, snippetRange._2.toInt)
         val ffmpegConvertOptions = Ffmpeg.convertOptions(
           mp3Path, 
           320)
@@ -164,22 +177,26 @@ class TrackWorker extends Actor with ActorLogging {
 
         val conversionFuture1 = Future{ffmpegConverter.convert(ffmpegConvertOptions)}
         val conversionFuture2 = Future{ffmpegConverter.convert(ffmpegCutOptions)}
+        val conversionFuture3 = Future{ffmpegConverter.convert(ffmpegOggCutOptions)}
         var conversionResult1 = 1
         var conversionResult2 = 1
+        var conversionResult3 = 1
 
         
         val waveform = WavWaveform.formatToJson(waveformBuilder.getWaveform(512), 2)
 
         remoteMp3CutPath = FileUtils.remoteTrackPath(releaseId, mp3CutFilename)
+        remoteOggCutPath = FileUtils.remoteTrackPath(releaseId, oggCutFilename)
         remoteMp3Path = FileUtils.remoteTrackPath(releaseId, mp3Filename)
         remoteWaveformPath = FileUtils.remoteTrackPath(releaseId, waveformFilename)
 
         conversionResult1 = Await.result(conversionFuture1, 1 minutes)
         conversionResult2 = Await.result(conversionFuture2, 1 minutes)
+        conversionResult3 = Await.result(conversionFuture3, 1 minutes)
 
 
         // If return status is not 0
-        if (conversionResult1 != 0 || conversionResult2 != 0) {
+        if (conversionResult1 != 0 || conversionResult2 != 0 || conversionResult3 != 0) {
           throw new Exception("Coversion failed")
         } else {
           conversionTime = (System.nanoTime - now) / 1000
@@ -191,6 +208,9 @@ class TrackWorker extends Actor with ActorLogging {
           // Upload 192 Kbps mp3 snippet
           Cloudstorage.uploadObject(
             remoteMp3CutPath, mp3CutPath, "application/octet-stream")
+          // Upload 192 Kbps ogg snippet
+          Cloudstorage.uploadObject(
+            remoteOggCutPath, mp3CutPath, "application/octet-stream")
           // Upload 320 Kbps mp3
           Cloudstorage.uploadObject(
             remoteMp3Path, mp3Path, "application/octet-stream")
