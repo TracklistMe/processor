@@ -6,6 +6,7 @@ case class Track(
   var path: String,
   var mp3Path: Option[String],
   var snippetPath: Option[String], 
+  var oggSnippetPath: Option[String], 
   var version: Option[String],
   var cover: Option[String],
   var lengthInSeconds: Option[Long],
