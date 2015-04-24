@@ -168,7 +168,8 @@ class TrackWorker extends Actor with ActorLogging {
           192, snippetRange._1.toInt, snippetRange._2.toInt)
         val ffmpegOggCutOptions = Ffmpeg.cutOptions(
           oggCutPath, 
-          192, snippetRange._1.toInt, snippetRange._2.toInt)
+          192, snippetRange._1.toInt, snippetRange._2.toInt,
+          Ffmpeg.VORBIS)
         val ffmpegConvertOptions = Ffmpeg.convertOptions(
           mp3Path, 
           320)
@@ -222,6 +223,7 @@ class TrackWorker extends Actor with ActorLogging {
 
         currentTrack.mp3Path = Some(remoteMp3Path)
         currentTrack.snippetPath = Some(remoteMp3CutPath)
+        currentTrack.oggSnippetPath = Some(remoteOggCutPath)
         currentTrack.status = Some("SUCCESS")
         currentTrack.downloadTime = Some(downloadTime)
         currentTrack.conversionTime = Some(conversionTime)
