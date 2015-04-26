@@ -21,6 +21,8 @@ case class Track(
 }
 
 sealed trait TrackStatus
-case object Fail extends TrackStatus
-case object Success extends TrackStatus
-case object Processing extends TrackStatus
+object TrackStatus {
+  case object Fail extends TrackStatus
+  case object Success extends TrackStatus
+  case object Processing extends TrackStatus
+}
