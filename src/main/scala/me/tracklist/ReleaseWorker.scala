@@ -180,6 +180,9 @@ class ReleaseWorker extends Actor with ActorLogging {
       } else {
         if (availableWorkers == ApplicationConfig.TRACK_WORKERS) {
           log.info("Release " + currentRelease.id + " processing failed")
+          trackWorkers.foreach(worker => 
+            worker ! TrackWorker.Rollback
+          )
           // Send fail message to rabbitmq
           try {
             currentRelease.status = Some("PROCESSING_FAILED")
