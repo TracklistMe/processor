@@ -76,6 +76,22 @@ class TrackWorker extends Actor with ActorLogging {
   }
 
   /**
+   * Delete the actor state
+   **/
+  private def cleanState() {
+    currentTrack = null
+    currentRelease = null
+    localLosslessPath = null
+    mp3CutPath = null
+    oggCutPath = null
+    mp3Path = null
+    remoteMp3CutPath = null
+    remoteOggCutPath = null
+    remoteMp3Path = null
+    remoteWaveformPath = null
+  } 
+
+  /**
    * Get snippet begin and end in seconds
    * @param lengthInSeconds length of the track in seconds
    * @returns a pair of the form (cutBegin, cutLength)
@@ -126,6 +142,10 @@ class TrackWorker extends Actor with ActorLogging {
      * 4) Find intensity points
      **/
     case TrackMessage(track, releaseId) =>
+
+      // Clean actor state from previous release
+      cleanState()
+
       currentTrack = track
       currentRelease = releaseId
       log.info("Processing Track " + track.id)
@@ -297,6 +317,10 @@ class TrackWorker extends Actor with ActorLogging {
       cleanRemote()
       context.stop(self)
 
+    case Rollback =>
+      cleanLocal()
+      cleanRemote()
+
   }
 
 }
@@ -305,5 +329,6 @@ object TrackWorker {
   val props = Props[TrackWorker]
   case class TrackMessage(track : Track, releaseId : Integer)
   case object Terminate
+  case object Rollback
   case object TerminateAndRollback
 }

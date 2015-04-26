@@ -212,6 +212,7 @@ object ApplicationConfig {
   val RABBITMQ_RESULT_QUEUE       = conf.getString("rabbitmq.result_queue")
   
   val RELEASE_WORKERS             = conf.getInt("release_workers")
+  val TRACK_WORKERS               = conf.getInt("track_workers")
 
   val LOCAL_STORAGE_PATH          = conf.getString("local_storage_path")
 
