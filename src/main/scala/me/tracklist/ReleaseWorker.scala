@@ -93,12 +93,34 @@ class ReleaseWorker extends Actor with ActorLogging {
     ApplicationConfig.RABBITMQ_RESULT_QUEUE,
     RabbitConnector.DURABLE)
 
-  def clear() = {
+  private def clear() = {
     receivedAt = 0
     releaseFailed = false;
     processedTracks = 0;
     tracksStatus.clear();
     currentRelease = null;
+  }
+
+  private def rollbackRelease() {
+    currentRelease.Tracks.foreach({track => 
+      if (tracksStatus.get(track.id) == TrackStatus.Success) {
+        TrackWorker.cleanRemote(track)
+      }
+    })
+  }
+
+  private def sendMessageAndClear() {
+    try {
+      resultQueue.blockingPublish(
+        currentRelease.toJson.prettyPrint, 
+        "application/json", 
+        true)
+    } catch {
+      case e: Exception => log.info(e.getMessage())
+    } finally {
+      FileUtils.deleteReleaseRecursively(currentRelease.id)
+      clear();
+    } 
   }
 
   def receive = {
@@ -131,7 +153,7 @@ class ReleaseWorker extends Actor with ActorLogging {
           processedTracks < currentRelease.Tracks.length) {          
           val track = currentRelease.Tracks(processedTracks)
           trackWorkers(processedTracks) ! TrackWorker.TrackMessage(track, currentRelease.id)
-          tracksStatus.put(track.id, Processing)
+          tracksStatus.put(track.id, TrackStatus.Processing)
           availableWorkers = availableWorkers - 1
           processedTracks = processedTracks + 1
         }
@@ -147,7 +169,7 @@ class ReleaseWorker extends Actor with ActorLogging {
      **/
     case TrackSuccess(track) =>
       log.info("Track " + track.id + " processed correctly")
-      tracksStatus.put(track.id, Success)
+      tracksStatus.put(track.id, TrackStatus.Success)
       availableWorkers = availableWorkers + 1
 
       //log.info("Processed " + processedTracks + " tracks out of " + currentRelease.Tracks.length)
@@ -163,40 +185,17 @@ class ReleaseWorker extends Actor with ActorLogging {
           currentRelease.status = Some("PROCESSED")
           currentRelease.processedAt = Some(DateTime.now.toString)
           currentRelease.processingTime = Some((System.nanoTime - receivedAt)/1000)  
-          // Send success message to rabbitmq
-          try {
-            resultQueue.blockingPublish(
-              currentRelease.toJson.prettyPrint, 
-              "application/json", 
-              true)
-          } catch {
-            case e: Exception => log.info(e.getMessage())
-          } finally {
-            FileUtils.deleteReleaseRecursively(currentRelease.id)
-            clear();
-            self ! Consume
-          }  
+          sendMessageAndClear()
+          self ! Consume
         }
       } else {
         if (availableWorkers == ApplicationConfig.TRACK_WORKERS) {
           log.info("Release " + currentRelease.id + " processing failed")
-          trackWorkers.foreach(worker => 
-            worker ! TrackWorker.Rollback
-          )
-          // Send fail message to rabbitmq
-          try {
-            currentRelease.status = Some("PROCESSING_FAILED")
-            resultQueue.blockingPublish(
-              currentRelease.toJson.prettyPrint, 
-              "application/json", 
-              true)
-          } catch {
-            case e: Exception => log.info(e.getMessage())
-          } finally {
-            FileUtils.deleteReleaseRecursively(currentRelease.id)
-            clear();
-            self ! Consume
-          }  
+
+          rollbackRelease()
+          currentRelease.status = Some("PROCESSING_FAILED")
+          sendMessageAndClear()
+          self ! Consume
         }
       }
 
@@ -205,29 +204,17 @@ class ReleaseWorker extends Actor with ActorLogging {
      **/  
     case TrackFail(track, message) => 
       log.info("Track " + track.id + " processing failed")
-      tracksStatus.put(track.id, Fail)
+      tracksStatus.put(track.id, TrackStatus.Fail)
       releaseFailed = true
       availableWorkers = availableWorkers + 1
 
       if (availableWorkers == ApplicationConfig.TRACK_WORKERS) {
         log.info("Release " + currentRelease.id + " processing failed")
-        trackWorkers.foreach(worker => 
-          worker ! TrackWorker.Rollback
-        )
-        // Send fail message to rabbitmq
-        try {
-          currentRelease.status = Some("PROCESSING_FAILED")
-          resultQueue.blockingPublish(
-            currentRelease.toJson.prettyPrint, 
-            "application/json", 
-            true)
-        } catch {
-          case e: Exception => log.info(e.getMessage())
-        } finally {
-          FileUtils.deleteReleaseRecursively(currentRelease.id)
-          clear();
-          self ! Consume
-        }  
+
+        rollbackRelease()
+        currentRelease.status = Some("PROCESSING_FAILED")
+        sendMessageAndClear()
+        self ! Consume
       }
   }
 }

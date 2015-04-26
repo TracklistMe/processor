@@ -111,26 +111,7 @@ class TrackWorker extends Actor with ActorLogging {
    * Delete remote files
    **/
   private def cleanRemote() {
-    try {
-      if(remoteMp3CutPath != null) Cloudstorage.deleteObject(remoteMp3CutPath)
-    } catch {
-      case e: Exception => {}
-    }
-    try {
-      if(remoteOggCutPath != null) Cloudstorage.deleteObject(remoteOggCutPath)
-    } catch {
-      case e: Exception => {}
-    }
-    try {
-      if(remoteMp3Path != null) Cloudstorage.deleteObject(remoteMp3Path)
-    } catch {
-      case e: Exception => {}
-    }
-    try {
-      if(remoteWaveformPath != null) Cloudstorage.deleteObject(remoteWaveformPath)
-    } catch {
-      case e: Exception => {}
-    }
+    TrackWorker.cleanRemote(currentTrack)
   }
 
   def receive = {
@@ -331,4 +312,27 @@ object TrackWorker {
   case object Terminate
   case object Rollback
   case object TerminateAndRollback
+
+  def cleanRemote(track : Track) {
+    try {
+      if(track.mp3Path != None) Cloudstorage.deleteObject(track.mp3Path.get)
+    } catch {
+      case e: Exception => {}
+    }
+    try {
+      if(track.snippetPath != None) Cloudstorage.deleteObject(track.snippetPath.get)
+    } catch {
+      case e: Exception => {}
+    }
+    try {
+      if(track.oggSnippetPath != None) Cloudstorage.deleteObject(track.oggSnippetPath.get)
+    } catch {
+      case e: Exception => {}
+    }
+    try {
+      if(track.waveform != None) Cloudstorage.deleteObject(track.waveform.get)
+    } catch {
+      case e: Exception => {}
+    }
+  }
 }
