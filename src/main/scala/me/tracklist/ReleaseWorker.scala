@@ -178,22 +178,24 @@ class ReleaseWorker extends Actor with ActorLogging {
       processedTracks = processedTracks + 1
       availableWorkers = availableWorkers + 1
 
-      //log.info("Processed " + processedTracks + " tracks out of " + currentRelease.Tracks.length)
+      log.info("Processed " + processedTracks + " tracks out of " + currentRelease.Tracks.length)
       if (!releaseFailed) {
-        if (processedTracks < currentRelease.Tracks.length) {
-          // If there are still tracks to be processed
-          sender ! currentRelease.Tracks(nextTrackToProcess)
-          availableWorkers = availableWorkers - 1
-          nextTrackToProcess = nextTrackToProcess + 1
-        } else {
+        if (processedTracks == currentRelease.Tracks.length) {
           // If we processed all the tracks
           log.info("Release " + currentRelease.id + " processed correctly")
           currentRelease.status = Some("PROCESSED")
           currentRelease.processedAt = Some(DateTime.now.toString)
           currentRelease.processingTime = Some((System.nanoTime - receivedAt)/1000)  
           sendMessageAndClear()
-          self ! Consume
-        }
+          self ! Consume          
+        } else {
+          if (nextTrackToProcess < currentRelease.Tracks.length) {
+            // If there are still tracks to be processed
+            sender ! currentRelease.Tracks(nextTrackToProcess)
+            availableWorkers = availableWorkers - 1
+            nextTrackToProcess = nextTrackToProcess + 1
+          }
+        } 
       } else {
         if (availableWorkers == ApplicationConfig.TRACK_WORKERS) {
           log.info("Release " + currentRelease.id + " processing failed")
