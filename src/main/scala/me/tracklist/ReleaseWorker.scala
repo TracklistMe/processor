@@ -191,7 +191,7 @@ class ReleaseWorker extends Actor with ActorLogging {
         } else {
           if (nextTrackToProcess < currentRelease.Tracks.length) {
             // If there are still tracks to be processed
-            sender ! currentRelease.Tracks(nextTrackToProcess)
+            sender ! TrackWorker.TrackMessage(currentRelease.Tracks(nextTrackToProcess), currentRelease.id)
             availableWorkers = availableWorkers - 1
             nextTrackToProcess = nextTrackToProcess + 1
           }
