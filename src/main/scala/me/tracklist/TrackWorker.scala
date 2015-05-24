@@ -188,11 +188,6 @@ class TrackWorker extends Actor with ActorLogging {
         
         val waveform = WavWaveform.formatToJson(waveformBuilder.getWaveform(512), 2)
 
-        val (bpmResult, bpmString) = BpmDetector(localLosslessPath).bpm()
-        if (bpmResult != 0) {
-          throw new Exception("Bpm detection failed")
-        }
-
         remoteMp3CutPath = FileUtils.remoteTrackPath(releaseId, mp3CutFilename)
         remoteOggCutPath = FileUtils.remoteTrackPath(releaseId, oggCutFilename)
         remoteMp3Path = FileUtils.remoteTrackPath(releaseId, mp3Filename)
@@ -225,6 +220,11 @@ class TrackWorker extends Actor with ActorLogging {
           uploadTime = (System.nanoTime - now) / 1000
 
         }   
+
+        val (bpmResult, bpmString) = BpmDetector(localLosslessPath).bpm()
+        if (bpmResult != 0) {
+          throw new Exception("Bpm detection failed " + bpmString)
+        }
 
         cleanLocal()
 
