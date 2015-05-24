@@ -215,5 +215,5 @@ object ApplicationConfig {
   val TRACK_WORKERS               = conf.getInt("track_workers")
 
   val LOCAL_STORAGE_PATH          = conf.getString("local_storage_path")
-
+  val PYTHON_PATH                 = conf.getString("python_path")
 }

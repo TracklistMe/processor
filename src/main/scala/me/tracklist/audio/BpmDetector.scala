@@ -9,6 +9,8 @@ import java.io.FileNotFoundException
 // Scala processor of external commands
 import scala.sys.process._
 
+import me.tracklist.ApplicationConfig
+
 /**
  * Utility class to compute tempo in BPM for an audio file
  **/
@@ -37,7 +39,7 @@ class BpmDetector(val filename: String) {
 
 object BpmDetector {
 
-  private val python_script = getClass.getResource("/bpm.py").getPath
+  private val python_script = ApplicationConfig.PYTHON_PATH + "bpm.py"
 
   def apply(filename: String) = new BpmDetector(filename)
 }
