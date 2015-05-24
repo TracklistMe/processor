@@ -104,6 +104,9 @@ class ReleaseWorker extends Actor with ActorLogging {
     processedTracks = 0;
     tracksStatus.clear();
     currentRelease = null;
+
+    nextTrackToProcess = 0
+    availableWorkers = ApplicationConfig.TRACK_WORKERS
   }
 
   private def rollbackRelease() {
