@@ -70,7 +70,7 @@ object Ffmpeg {
   val MP3     = 0
   val VORBIS  = 1
   
-  def apply(filename: String) = new Lame(filename)
+  def apply(filename: String) = new Ffmpeg(filename)
 
   class Options(
     val output: String = "output.mp3", // Output filename
