@@ -24,6 +24,7 @@ import me.tracklist.utils.FileUtils
 // Audio API
 import me.tracklist.audio.Lame
 import me.tracklist.audio.Ffmpeg
+import me.tracklist.audio.BpmDetector
 import me.tracklist.audio.WavWaveform
 
 // Akka futures
@@ -187,6 +188,11 @@ class TrackWorker extends Actor with ActorLogging {
         
         val waveform = WavWaveform.formatToJson(waveformBuilder.getWaveform(512), 2)
 
+        val (bpmResult, bpmString) = BpmDetector(localLosslessPath).bpm()
+        if (bpmResult != 0) {
+          throw new Exception("Bpm detection failed")
+        }
+
         remoteMp3CutPath = FileUtils.remoteTrackPath(releaseId, mp3CutFilename)
         remoteOggCutPath = FileUtils.remoteTrackPath(releaseId, oggCutFilename)
         remoteMp3Path = FileUtils.remoteTrackPath(releaseId, mp3Filename)
@@ -232,6 +238,7 @@ class TrackWorker extends Actor with ActorLogging {
         currentTrack.processedAt = Some(DateTime.now.toString)
         currentTrack.lengthInSeconds = Some(lengthInSeconds)
         currentTrack.waveform = Some(remoteWaveformPath)
+        currentTrack.bpm = Some(bpmString.toDouble)
 
         sender ! ReleaseWorker.TrackSuccess(currentTrack)
 

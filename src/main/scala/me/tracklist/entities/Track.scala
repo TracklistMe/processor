@@ -11,6 +11,7 @@ case class Track(
   var cover: Option[String],
   var lengthInSeconds: Option[Long],
   var waveform: Option[String],
+  var bpm : Option[Double],
   var status: Option[String],
   var errorMessage: Option[String],
   var conversionTime: Option[Long],
