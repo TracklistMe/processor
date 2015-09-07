@@ -57,6 +57,11 @@ class ReleaseWorker extends Actor with ActorLogging {
     }
 
   /**
+   * Tracks to be processed
+   */
+  var tracksToBeProcessed : Array[Track] = null;
+
+  /**
    * Number of tracks that have already been processed
    **/
   var processedTracks : Integer = 0
@@ -100,17 +105,18 @@ class ReleaseWorker extends Actor with ActorLogging {
 
   private def clear() = {
     receivedAt = 0
-    releaseFailed = false;
-    processedTracks = 0;
-    tracksStatus.clear();
-    currentRelease = null;
+    releaseFailed = false
+    processedTracks = 0
+    tracksStatus.clear()
+    currentRelease = null
+    tracksToBeProcessed = null
 
     nextTrackToProcess = 0
     availableWorkers = ApplicationConfig.TRACK_WORKERS
   }
 
   private def rollbackRelease() {
-    currentRelease.Tracks.foreach({track => 
+    tracksToBeProcessed.foreach({track => 
       if (tracksStatus.get(track.id) == TrackStatus.Success) {
         TrackWorker.cleanRemote(track)
       }
@@ -152,14 +158,15 @@ class ReleaseWorker extends Actor with ActorLogging {
         // 2) Store release as currentRelease
         currentRelease = releaseString.parseJson.convertTo[Release]
         receivedAt = System.nanoTime
+        tracksToBeProcessed = currentRelease.Tracks.filter(_.status == Some("TO_BE_PROCESSED"))
         log.info("Received release with id = " + currentRelease.id)
         // 3) Create a directory to store temporary release data
         FileUtils.createReleaseDirectory(currentRelease.id)
         // 4) Populate tracks, set status to Processing
         // 5) Start a track worker for each track
         while (nextTrackToProcess < ApplicationConfig.TRACK_WORKERS && 
-          nextTrackToProcess < currentRelease.Tracks.length) {          
-          val track = currentRelease.Tracks(nextTrackToProcess)
+          nextTrackToProcess < tracksToBeProcessed.length) {          
+          val track = tracksToBeProcessed(nextTrackToProcess)
           trackWorkers(nextTrackToProcess) ! TrackWorker.TrackMessage(track, currentRelease.id)
           tracksStatus.put(track.id, TrackStatus.Processing)
           availableWorkers = availableWorkers - 1
@@ -181,9 +188,9 @@ class ReleaseWorker extends Actor with ActorLogging {
       processedTracks = processedTracks + 1
       availableWorkers = availableWorkers + 1
 
-      log.info("Processed " + processedTracks + " tracks out of " + currentRelease.Tracks.length)
+      log.info("Processed " + processedTracks + " tracks out of " + tracksToBeProcessed.length)
       if (!releaseFailed) {
-        if (processedTracks == currentRelease.Tracks.length) {
+        if (processedTracks == tracksToBeProcessed.length) {
           // If we processed all the tracks
           log.info("Release " + currentRelease.id + " processed correctly")
           currentRelease.status = Some("PROCESSED")
@@ -192,9 +199,9 @@ class ReleaseWorker extends Actor with ActorLogging {
           sendMessageAndClear()
           self ! Consume          
         } else {
-          if (nextTrackToProcess < currentRelease.Tracks.length) {
+          if (nextTrackToProcess < tracksToBeProcessed.length) {
             // If there are still tracks to be processed
-            sender ! TrackWorker.TrackMessage(currentRelease.Tracks(nextTrackToProcess), currentRelease.id)
+            sender ! TrackWorker.TrackMessage(tracksToBeProcessed(nextTrackToProcess), currentRelease.id)
             availableWorkers = availableWorkers - 1
             nextTrackToProcess = nextTrackToProcess + 1
           }

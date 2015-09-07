@@ -65,7 +65,6 @@ class TrackWorker extends Actor with ActorLogging {
   var remoteMp3Path : String = null
   var remoteWaveformPath : String = null
 
-
   /**
    * Delete local files
    **/
@@ -231,7 +230,7 @@ class TrackWorker extends Actor with ActorLogging {
         currentTrack.mp3Path = Some(remoteMp3Path)
         currentTrack.snippetPath = Some(remoteMp3CutPath)
         currentTrack.oggSnippetPath = Some(remoteOggCutPath)
-        currentTrack.status = Some("SUCCESS")
+        currentTrack.status = Some("PROCESSING_SUCCEEDED")
         currentTrack.downloadTime = Some(downloadTime)
         currentTrack.conversionTime = Some(conversionTime)
         currentTrack.uploadTime = Some(uploadTime)
@@ -250,7 +249,7 @@ class TrackWorker extends Actor with ActorLogging {
         case e: me.tracklist.audio.WavFileException => 
           var exceptionMessage = e.getMessage()
           var message = "Track " + track.id + " error: " + exceptionMessage
-          currentTrack.status = Some("FAIL")
+          currentTrack.status = Some("PROCESSING_FAILED")
           currentTrack.errorMessage = Some(exceptionMessage)
           log.info(message)
           // remove the files if they were created
@@ -259,7 +258,7 @@ class TrackWorker extends Actor with ActorLogging {
         case e: InterruptedException => 
           var exceptionMessage = e.getMessage()
           var message = "Track " + track.id + " error: " + exceptionMessage
-          currentTrack.status = Some("FAIL")
+          currentTrack.status = Some("PROCESSING_FAILED")
           currentTrack.errorMessage = Some(exceptionMessage)
           log.info(message)
           // remove the files if they were created
@@ -268,7 +267,7 @@ class TrackWorker extends Actor with ActorLogging {
         case e: TimeoutException => 
           var exceptionMessage = e.getMessage()
           var message = "Track " + track.id + " error: " + exceptionMessage
-          currentTrack.status = Some("FAIL")
+          currentTrack.status = Some("PROCESSING_FAILED")
           currentTrack.errorMessage = Some(exceptionMessage)
           log.info(message)
           // remove the files if they were created
@@ -277,7 +276,7 @@ class TrackWorker extends Actor with ActorLogging {
         case e: java.io.IOException =>
           var exceptionMessage = e.getMessage()
           var message = "Track " + track.id + " error: " + exceptionMessage
-          currentTrack.status = Some("FAIL")
+          currentTrack.status = Some("PROCESSING_FAILED")
           currentTrack.errorMessage = Some(exceptionMessage)
           log.info(message)
           // remove the files if they were created
@@ -287,7 +286,7 @@ class TrackWorker extends Actor with ActorLogging {
         case e: Exception =>
           var exceptionMessage = e.getMessage()
           var message = "Track " + track.id + " error: " + exceptionMessage
-          currentTrack.status = Some("FAIL")
+          currentTrack.status = Some("PROCESSING_FAILED")
           currentTrack.errorMessage = Some(exceptionMessage)
           log.info(message)
           // remove the files if they were created
